@@ -1,44 +1,39 @@
 import json
-from models import add_item, get_item, get_items, update_item, delete_item
+from crud import add_item
 from quart import websocket
-
+from app import sock
 from models import items
 from schemas import ItemSchema
+from databases import database
+from models import Item
 
 clients = set()
 
 
-async def websocket_route():
-    from app import sock  # Import here, inside the function that needs it
-    clients.add(websocket._get_current_object())
-    try:
-        while True:
-            data = await websocket.receive()
-            await broadcast(data)
-            command, *params = data.split(',')
-            if command == 'add':
-                item_name = params[0]
-                added_item = add_item(item_name)  # Use the add_item function from models.py
-                await broadcast(f"Item added: {added_item}")  # Notify all clients
-            elif command == 'get':
-                item_id = params['id']
-                item = get_item(item_id)
-                await broadcast(json.dumps({"type": "get", "data": item}))
-            elif command == 'getAll':
-                items = get_items()
-                await broadcast(json.dumps({"type": "getAll", "data": items}))
-            elif command == 'update':
-                item_id = params['id']
-                item_name = params['name']
-                updated_item = update_item(item_id, item_name)
-                await broadcast(json.dumps({"type": "update", "data": updated_item}))
-            elif command == 'delete':
-                item_id = params['id']
-                delete_item(item_id)
-                await broadcast(json.dumps({"type": "delete", "id": item_id}))
-    finally:
-        clients.remove(websocket._get_current_object())
+def websocket_route(Session):
+    @sock.route('/ws')
+    async def websocket_handler(ws):
+        session = Session()
 
+        # Retrieve items from the database and send them to the client
+        items = session.query(Item).all()
+        await ws.send(json.dumps([item.__dict__ for item in items]))
+
+        try:
+            while True:
+                # Handle WebSocket messages and database updates
+                data = await ws.receive()
+                await broadcast(data)
+                command, *params = data.split(',')
+                if command == 'add':
+                    item_name = params[0]
+                    added_item = add_item(item_name)  # Use the add_item function from models.py
+                    await broadcast(f"Item added: {added_item}")  # Notify all clients
+        finally:
+            session.close()
+def setup_websockets(sock):
+    sock.route('/ws')(websocket_route)
+    
 async def broadcast(message):
     for client in clients:
         await client.send(message)

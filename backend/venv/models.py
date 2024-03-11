@@ -1,32 +1,49 @@
-items = []
+import select
+from sqlalchemy import Column, Integer, String
+from sqlalchemy.ext.declarative import declarative_base
+from database import AsyncSessionLocal
 
-def add_item(name):
-    """Add a new item to the in-memory list with a generated ID."""
-    new_id = len(items) + 1  # Simple ID generation
-    item = {'id': new_id, 'name': name}
-    items.append(item)
-    return item
+Base = declarative_base()
 
-def get_item(item_id):
-    """Retrieve an item by ID from the in-memory list."""
-    for item in items:
-        if item['id'] == item_id:
-            return item
-    return None
+class Item(Base):
+    __tablename__ = 'items'
 
-def get_items():
-    """Retrieve all items."""
-    return items
+    id = Column(Integer, primary_key=True)
+    name = Column(String)
 
-def update_item(item_id, name):
-    """Update an existing item's name by ID."""
-    for item in items:
-        if item['id'] == item_id:
-            item['name'] = name
-            return item
-    return None
+async def get_items():
+    async with AsyncSessionLocal() as session:
+        async with session.begin():
+            result = await session.execute(
+                select(Item)
+            )
+            items = result.scalars().all()
+            return items
 
-def delete_item(item_id):
-    """Delete an item by ID from the in-memory list."""
-    global items
-    items = [item for item in items if item['id'] != item_id]
+async def add_item(name: str):
+    async with AsyncSessionLocal() as session:
+        async with session.begin():
+            new_item = Item(name=name)
+            session.add(new_item)
+            await session.commit()
+            return new_item
+
+async def update_item(item_id: int, name: str):
+    async with AsyncSessionLocal() as session:
+        async with session.begin():
+            item = await session.get(Item, item_id)
+            if item:
+                item.name = name
+                await session.commit()
+                return item
+            return None
+
+async def delete_item(item_id: int):
+    async with AsyncSessionLocal() as session:
+        async with session.begin():
+            item = await session.get(Item, item_id)
+            if item:
+                await session.delete(item)
+                await session.commit()
+                return True
+            return False
