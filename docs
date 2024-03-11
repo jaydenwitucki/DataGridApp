@@ -1,0 +1,9 @@
+source venv/bin/activate
+npm run dev
+python app.py
+
+
+const handleAddItem = () => {
+    const newItem = { id: rows.length + 1, name: `Item ${rows.length + 1}` };
+    setRows([...rows, newItem]);
+  };

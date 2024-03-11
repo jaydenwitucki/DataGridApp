@@ -1,0 +1,19 @@
+{
+  "name": "real-time-data-grids",
+  "version": "1.0.0",
+  "scripts": {
+    "start": "concurrently \"cd backend/venv && python app.py\" \"cd 'frontend/my-react-app' && npm run dev\""
+  },
+  "devDependencies": {
+    "concurrently": "^8.2.2"
+  },
+  "dependencies": {
+    "@emotion/react": "^11.11.4",
+    "@emotion/styled": "^11.11.0",
+    "@mui/icons-material": "^5.15.12",
+    "@mui/material": "^5.15.12",
+    "@mui/x-data-grid": "^6.19.6",
+    "react-use-websocket": "^4.8.1",
+    "uuid": "^9.0.1"
+  }
+}
